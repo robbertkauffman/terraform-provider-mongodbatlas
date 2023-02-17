@@ -34,22 +34,32 @@ resource "aws_subnet" "primary-az2" {
 }
 
 /*Security-Group
-Ingress - Port 80 -- limited to instance
-          Port 22 -- Open to ssh without limitations
+Ingress - Port 22 -- Open to SSH without limitations
+        - Port 1024-1074 - Open to both subnets for MongoDB private endpoint port ranges
 Egress  - Open to All*/
 
 resource "aws_security_group" "primary_default" {
   name_prefix = "default-"
   description = "Default security group for all instances in ${aws_vpc.primary.id}"
   vpc_id      = aws_vpc.primary.id
+
   ingress {
-    from_port = 0
-    to_port   = 0
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 1024 // 50 addressable targets starting from port 1024
+    to_port   = 1074 // although officially it can go up to port 65535
     protocol  = "tcp"
     cidr_blocks = [
-      "0.0.0.0/0",
+      aws_subnet.primary-az1.cidr_block,
+      aws_subnet.primary-az2.cidr_block
     ]
   }
+
   egress {
     from_port   = 0
     to_port     = 0
