@@ -1,3 +1,4 @@
+# Comment entire file if you want to set up PrivateLink with an existing cluster
 resource "mongodbatlas_cluster" "cluster-atlas" {
   project_id                   = var.atlas_project_id
   name                         = "cluster-atlas"

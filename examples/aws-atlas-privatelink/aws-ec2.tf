@@ -1,3 +1,4 @@
+# Comment entire file if you do NOT need a jumphost
 data "aws_ami" "ubuntu" {
   most_recent = true
 
