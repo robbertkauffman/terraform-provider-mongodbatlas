@@ -1,5 +1,5 @@
 resource "mongodbatlas_cluster" "cluster-atlas" {
-  project_id                   = var.atlasprojectid
+  project_id                   = var.atlas_project_id
   name                         = "cluster-atlas"
   cloud_backup                 = true
   auto_scaling_disk_gb_enabled = true
@@ -21,7 +21,7 @@ resource "mongodbatlas_cluster" "cluster-atlas" {
 }
 
 data "mongodbatlas_cluster" "cluster-atlas" {
-  project_id = var.atlasprojectid
+  project_id = var.atlas_project_id
   name       = mongodbatlas_cluster.cluster-atlas.name
   depends_on = [mongodbatlas_privatelink_endpoint_service.atlaseplink]
 }
