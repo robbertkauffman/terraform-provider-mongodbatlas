@@ -23,9 +23,10 @@ data "mongodbatlas_cluster" "cluster-atlas" {
   depends_on = [mongodbatlas_privatelink_endpoint_service.atlas_endpoint_service]
 }
 
-output "atlasclusterstring" {
-  value = data.mongodbatlas_cluster.cluster-atlas.connection_strings
-}
-output "plstring" {
-  value = lookup(data.mongodbatlas_cluster.cluster-atlas.connection_strings[0].aws_private_link_srv, aws_vpc_endpoint.ptfe_service.id)
+# output "atlas_connstrings" {
+#   value = data.mongodbatlas_cluster.cluster-atlas.connection_strings
+# }
+
+output "atlas_pe_connstring" {
+  value = lookup(data.mongodbatlas_cluster.cluster-atlas.connection_strings[0].aws_private_link_srv, aws_vpc_endpoint.vpc_endpoint.id)
 }
