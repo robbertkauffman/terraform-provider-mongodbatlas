@@ -1,109 +1,78 @@
-# Example - AWS and Atlas PrivateLink with Terraform
+# Atlas Terraform Provider Example: PrivateLink - AWS
 
-This project aims to provide a very straight-forward example of setting up PrivateLink connection between AWS and MongoDB Atlas.
+This example sets up a PrivateLink connection between your AWS VPC and your MongoDB Atlas Project. Optionally, it can also provision a jumphost to verify connectivity from AWS to the Atlas cluster over PrivateLink.
 
-
-## Dependencies
-
-* Terraform v0.13
-* An AWS account - provider.aws: version = "~> 3.3"
-* A MongoDB Atlas account - provider.mongodbatlas: version = "~> 0.6"
+It deploys the following resources:
+- AWS VPC, Internet Gateway, Route Tables, Subnets with public and private access
+- VPC/Private Endpoint in AWS VPC
+- PrivateLink Service in MongoDB Atlas Project
+- PrivateLink connection from AWS Private Endpoint to PrivateLink Service in MongoDB Atlas
+- Optional: MongoDB Atlas cluster (M10)
+- Optional: jumphost on AWS EC2
 
 ## Usage
 
-**1\. Ensure your AWS and MongoDB Atlas credentials are set up.**
+1. Set your Atlas public & private API key via environment variables:
 
-This can be done using environment variables:
+        $ export MONGODB_ATLAS_PUBLIC_KEY="xxxxxxxx"
+        $ export MONGODB_ATLAS_PRIVATE_KEY="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx"
 
-``` bash
-$ export AWS_SECRET_ACCESS_KEY='your secret key'
-$ export AWS_ACCESS_KEY_ID='your key id'
-```
+2. Set your AWS access key & secret via environment variables:
 
-```bash
-export MONGODB_ATLAS_PUBLIC_KEY="xxxx"
-export MONGODB_ATLAS_PRIVATE_KEY="xxxx"
-```
+        $ export AWS_ACCESS_KEY_ID="xxxxxxxxxxxxxxxxxxxx"
+        $ export AWS_SECRET_ACCESS_KEY="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
-... or the `~/.aws/credentials` file.
+3. Initialize Terraform: `terraform init`
 
-```
-$ cat ~/.aws/credentials
-[default]
-aws_access_key_id = your key id
-aws_secret_access_key = your secret key
+4. Specify any of the optional deployments:
+  - If you want to use an existing Atlas cluster, comment all lines in *atlas-cluster.tf*
+  - If you do NOT want to deploy a jumphost, comment all lines in *aws-jumphost.tf*
+    - If you need access to the jumphost over SSH instead of via the AWS web console (EC2 Instance Connect), then you can add your SSH key via the *jumphost_ssh_key* variable
 
-```
-... or follow as in the `variables.tf` file and create **terraform.tfvars** file with all the variable values and make sure **not to commit it**.
+4. Run Terraform *apply* and supply values for any of the variables when prompted: `terraform apply`
 
-**2\. Review the Terraform plan.**
+5. Once Terraform is finished provisioning the resources, it should output the Atlas Private Endpoint connection string:
+        
+        atlas_pe_connstring = "mongodb+srv://cluster-atlas-pl-0.zywgx.mongodb.net"
 
-Execute the below command and ensure you are happy with the plan.
+Follow the steps in the next section if you want to verify connectivity from the AWS jumphost to the Atlas cluster.
 
-``` bash
-$ terraform plan
-```
-This project currently does the below deployments:
+6. Once you finished your testing, ensure you destroy the resources to avoid unnecessary charges: `terraform destroy`
 
-- MongoDB cluster - M10
-- AWS Custom VPC, Internet Gateway, Route Tables, Subnets with Public and Private access
-- PrivateLink Connection at MongoDB Atlas
-- Create VPC Endpoint in AWS
+## Connecting from jumphost
 
-**3\. Configure the security group as required.**
+1. Get the connection string from either the *terraform apply* output or the Atlas UI.
 
-The security group in this configuration allows All Traffic access in Inbound and Outbound Rules.
+2. Connect to the AWS jumphost via SSH or the AWS Console (EC2 Instance Connect).
 
-**4\. Execute the Terraform apply.**
+3. Install *netcat* by running: `sudo yum install -y nc`
 
-Now execute the plan to provision the AWS and Atlas resources.
+4. Resolve the connection string to a list of hostnames by prepending the hostname of the connection string with *_mongodb._tcp*:
 
-``` bash
-$ terraform apply
-```
+        $ nslookup -q=SRV _mongodb._tcp.cluster-atlas-pl-0.zywgx.mongodb.net
+        Server:         127.0.0.1
+        Address:        127.0.0.1#53
 
-**5\. Destroy the resources.**
+        Non-authoritative answer:
+        _mongodb._tcp.cluster-atlas-pl-0.zywgx.mongodb.net      service = 0 0 1043 pl-0-us-west-2.zywgx.mongodb.net.
+        _mongodb._tcp.cluster-atlas-pl-0.zywgx.mongodb.net      service = 0 0 1041 pl-0-us-west-2.zywgx.mongodb.net.
+        _mongodb._tcp.cluster-atlas-pl-0.zywgx.mongodb.net      service = 0 0 1042 pl-0-us-west-2.zywgx.mongodb.net.
 
-Once you are finished your testing, ensure you destroy the resources to avoid unnecessary charges.
+5. The command of the previous step should return a list of hostnames: the Atlas cluster nodes. Verify connectivity to any of the nodes with *netcat* and the hostname and port of the Atlas node:
 
-``` bash
-$ terraform destroy
-```
+        $ nc -zv -w 5 pl-0-us-west-2.zywgx.mongodb.net 1041
+        Ncat: Version 7.50 ( https://nmap.org/ncat )
+        Ncat: Connected to 10.0.1.76:1039.
+        Ncat: 0 bytes sent, 0 bytes received in 0.01 seconds.
 
-**Important Point**
+6. If the previous step times out, double check that the network security group is allowing access to the private endpoint over the ports that Atlas is using. If it succeeds, you can try connecting to the cluster using [mongosh](https://www.mongodb.com/docs/mongodb-shell/install/).
 
-To fetch the connection string follow the below steps:
-```
-output "atlasclusterstring" {
-    value = mongodbatlas_cluster.cluster-atlas.connection_strings
-}
-```
-**Outputs:**
-```
-atlasclusterstring = [
-  {
-    "aws_private_link" = {
-      "vpce-0ebb76559e8affc96" = "mongodb://pl-0-us-east-1.za3fb.mongodb.net:1024,pl-0-us-east-1.za3fb.mongodb.net:1025,pl-0-us-east-1.za3fb.mongodb.net:1026/?ssl=true&authSource=admin&replicaSet=atlas-d177ke-shard-0"
-    }
-    "aws_private_link_srv" = {
-      "vpce-0ebb76559e8affc96" = "mongodb+srv://cluster-atlas-pl-0.za3fb.mongodb.net"
-    }
-    "private" = ""
-    "private_srv" = ""
-    "standard" = "mongodb://cluster-atlas-shard-00-00.za3fb.mongodb.net:27017,cluster-atlas-shard-00-01.za3fb.mongodb.net:27017,cluster-atlas-shard-00-02.za3fb.mongodb.net:27017/?ssl=true&authSource=admin&replicaSet=atlas-d177ke-shard-0"
-    "standard_srv" = "mongodb+srv://cluster-atlas.za3fb.mongodb.net"
-  },
-]
-```
+## Network security group configuration
 
-To fetch a particular connection string, use the **lookup()** function of terraform as below:
+The following network access to and from the PE is required:
+- Allow inbound access over TCP for ports 1024-65535 (see note on ports below) to any IPs (e.g. application, jumphost) or subnets that will connect to the PE.
+- Allow outbound access over TCP from the PE to (all) subnet(s) and all ports.
 
-```
-output "plstring" {
-    value = lookup(mongodbatlas_cluster.cluster-atlas.connection_strings[0].aws_private_link_srv, aws_vpc_endpoint.ptfe_service.id)
-}
-```
-**Output:**
-```
-plstring = mongodb+srv://cluster-atlas-pl-0.za3fb.mongodb.net
-```
+MongoDB theoretically can use any port between 1024-65535. In practice, ports above 2000 are rarely used. The number of clusters and nodes for each cluster drive up the port range, and also cluster deletion and (re)creation as old ports are not always recycled.
+
+The network security group of this example allows access over ports 1024-1074, which should work for most small test clusters. Please adjust the port range when using an existing cluster that uses ports outside this range, by editing lines 54-55 of *aws-vpc.tf*.
