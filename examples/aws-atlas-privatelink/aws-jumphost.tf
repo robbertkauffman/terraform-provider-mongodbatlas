@@ -36,3 +36,7 @@ resource "aws_instance" "ec2_jumphost" {
     device_index         = 0
   }
 }
+
+output "jumphost-hostname" {
+  value = aws_instance.ec2_jumphost.public_dns
+}
