@@ -41,9 +41,11 @@ Follow the steps in the next section if you want to verify connectivity from the
 
 ## Connecting from jumphost
 
-1. Get the connection string from either the *terraform apply* output or the Atlas UI.
+1. Get the connection string from either using `terraform output` or the Atlas UI.
 
-2. Connect to the AWS jumphost via SSH or the AWS Console (EC2 Instance Connect).
+2. Connect to the AWS jumphost via SSH or the AWS Console (EC2 Instance Connect). If connecting via SSH, `terraform output` will give you the hostname of the jumphost. And connect using the user *ec2-user*:
+
+        ssh -i ssh-key.pem ec2-user@jumphost-hostname.compute.amazonaws.com
 
 3. Install *netcat* by running: `sudo yum install -y nc`
 
@@ -62,7 +64,7 @@ Follow the steps in the next section if you want to verify connectivity from the
 
         $ nc -zv -w 5 pl-0-us-west-2.zywgx.mongodb.net 1041
         Ncat: Version 7.50 ( https://nmap.org/ncat )
-        Ncat: Connected to 10.0.1.76:1039.
+        Ncat: Connected to 10.0.1.26:1041.
         Ncat: 0 bytes sent, 0 bytes received in 0.01 seconds.
 
 6. If the previous step times out, double check that the network security group is allowing access to the private endpoint over the ports that Atlas is using. If it succeeds, you can try connecting to the cluster using [mongosh](https://www.mongodb.com/docs/mongodb-shell/install/).
