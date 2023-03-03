@@ -15,5 +15,5 @@ variable "aws_region" {
 
 variable "jumphost_ssh_key" {
   description = "SSH key for AWS jumphost (leave blank if not using jumphost or if connecting to jumphost via AWS console)"
-  default     = ""
+  type        = string
 }
