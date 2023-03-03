@@ -24,7 +24,7 @@ resource "mongodbatlas_cluster" "cluster-atlas" {
 data "mongodbatlas_cluster" "cluster-atlas" {
   project_id = var.atlas_project_id
   name       = mongodbatlas_cluster.cluster-atlas.name
-  depends_on = [mongodbatlas_privatelink_endpoint_service.atlaseplink]
+  depends_on = [mongodbatlas_privatelink_endpoint_service.atlas_endpoint_service]
 }
 
 output "atlasclusterstring" {
